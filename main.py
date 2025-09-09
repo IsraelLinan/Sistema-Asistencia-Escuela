@@ -48,17 +48,17 @@ class MainApplication(ThemedTk):  # Usamos ThemedTk para aplicar el tema
         date_label.pack(pady=(0, 20))  # Espacio solo abajo para separar de los botones
 
         # Botones con tamaño más compacto y espaciado ajustado
-        self.student_button = ttk.Button(self, text="Ingreso de Estudiante", command=self.open_student_module, width=20)
+        self.student_button = ttk.Button(self, text="Ingreso de Estudiantes", command=self.open_student_module, width=25)
         self.student_button.pack(pady=10)
 
-        self.teacher_button = ttk.Button(self, text="Ingreso del Docente", command=self.open_teacher_module, width=20)
+        self.teacher_button = ttk.Button(self, text="Ingreso y Salida de Docentes", command=self.open_teacher_module, width=25)
         self.teacher_button.pack(pady=10)
 
-        self.report_button = ttk.Button(self, text="Reporte de Asistencia", command=self.open_report_module, width=20)
+        self.report_button = ttk.Button(self, text="Reporte de Asistencia", command=self.open_report_module, width=25)
         self.report_button.pack(pady=10)
 
         # Botón para abrir el generador de código de barra
-        self.barcode_button = ttk.Button(self, text="Generar Código Barra", command=self.open_barcode_module, width=20)
+        self.barcode_button = ttk.Button(self, text="Generar Código Barra", command=self.open_barcode_module, width=25)
         self.barcode_button.pack(pady=10)
 
     def open_student_module(self):

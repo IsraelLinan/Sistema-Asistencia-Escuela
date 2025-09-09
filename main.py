@@ -1,12 +1,13 @@
 import tkinter as tk
-from tkinter import ttk
+from tkinter import ttk, messagebox
 from ttkthemes import ThemedTk  # Importamos ThemedTk de ttkthemes
 from datetime import datetime
 from PIL import Image, ImageTk  # Importar PIL para manejar la imagen
 from student_ingress_module import StudentIngressModule
 from teacher_ingress_module import TeacherIngressModule
 from weekly_reports_module import WeeklyReportsModule
-from generador_codigo import GeneradorCodigo  
+from generador_codigo import GeneradorCodigo
+import subprocess # Importamos el modulo subprocess  
 
 class MainApplication(ThemedTk):  # Usamos ThemedTk para aplicar el tema
     def __init__(self):
@@ -60,6 +61,11 @@ class MainApplication(ThemedTk):  # Usamos ThemedTk para aplicar el tema
         # Botón para abrir el generador de código de barra
         self.barcode_button = ttk.Button(self, text="Generar Código Barra", command=self.open_barcode_module, width=25)
         self.barcode_button.pack(pady=10)
+        
+        # botón para abrir el Dashboard externo
+        self.dashboard_button = ttk.Button(self, text="Abrir Dashboard", command=self.open_dashboard, width=25)
+        self.dashboard_button.pack(pady=10)
+
 
     def open_student_module(self):
         student_window = tk.Toplevel(self)
@@ -84,6 +90,16 @@ class MainApplication(ThemedTk):  # Usamos ThemedTk para aplicar el tema
         barcode_window.title("Generador Código de Barra")
         app = GeneradorCodigo(barcode_window)  # Abre el módulo de generador de código de barra
         app.pack(fill='both', expand=True, padx=10, pady=10)
+        
+    def open_dashboard(self):
+        try:
+            subprocess.Popen(["streamlit", "run", "dashboard.py"])
+        except FileNotFoundError:
+            messagebox.showerror("Error", "Streamlit no está instalado o no está en el PATH. "
+                                        "Por favor, instale Streamlit con 'pip install streamlit'.")
+        except Exception as e:
+            messagebox.showerror("Error", f"Ocurrió un error al intentar abrir el dashboard: {e}")
+
 
 if __name__ == "__main__":
     app = MainApplication()

@@ -22,7 +22,10 @@ class WeeklyReportsModule(ttk.Frame):
         self.create_widgets()
 
     def create_widgets(self):
-        # Cargar y mostrar la imagen del logo
+        self.rowconfigure(2, weight=1)
+        self.columnconfigure(0, weight=1)
+
+        # Logo (ocupa la primera fila del grid principal)
         logo_path = "logo_colegio.png"
         try:
             logo = Image.open(logo_path)
@@ -30,64 +33,88 @@ class WeeklyReportsModule(ttk.Frame):
             logo_image = ImageTk.PhotoImage(logo)
             logo_label = ttk.Label(self, image=logo_image)
             logo_label.image = logo_image
-            logo_label.grid(row=0, column=0, columnspan=4, pady=10)
+            logo_label.grid(row=0, column=0, pady=(10, 20))
         except FileNotFoundError:
-            messagebox.showerror("Error", "No se encontró la imagen del logo.")
-            logo_label = ttk.Label(self, text="Logo")
-            logo_label.grid(row=0, column=0, columnspan=4, pady=10)
+            logo_label = ttk.Label(self, text="Logo no encontrado")
+            logo_label.grid(row=0, column=0, pady=(10, 20))
 
-        # Controles de fecha
-        ttk.Label(self, text="Fecha Inicio:").grid(row=1, column=0, sticky="W", padx=5, pady=5)
-        self.start_date_entry = DateEntry(self, width=12, background='darkblue', foreground='white', borderwidth=2)
-        self.start_date_entry.grid(row=1, column=1, padx=5, pady=5)
+        # --- SECCIÓN DE CONTROLES SUPERIORES (DENTRO DE UN FRAME) ---
+        controls_frame = ttk.Frame(self)
+        controls_frame.grid(row=1, column=0, padx=10, pady=0, sticky="ew")
 
-        ttk.Label(self, text="Fecha Fin:").grid(row=1, column=2, sticky="W", padx=5, pady=5)
-        self.end_date_entry = DateEntry(self, width=12, background='darkblue', foreground='white', borderwidth=2)
-        self.end_date_entry.grid(row=1, column=3, padx=5, pady=5)
+        # CORRECCIÓN: Se usa 'columnconfigure' sin guion bajo.
+        controls_frame.columnconfigure(0, weight=1)
+        controls_frame.columnconfigure(1, weight=2)
+        controls_frame.columnconfigure(2, weight=1)
+        controls_frame.columnconfigure(3, weight=2)
+        controls_frame.columnconfigure(4, weight=1) # Espacio para el botón
 
-        # Filtro por tipo de persona
-        ttk.Label(self, text="Tipo:").grid(row=2, column=0, sticky="W", padx=5, pady=5)
-        self.type_combobox = ttk.Combobox(self, values=["Todos", "Estudiantes", "Docentes"], state="readonly")
-        self.type_combobox.grid(row=2, column=1, padx=5, pady=5)
+        # Widgets de Fecha
+        ttk.Label(controls_frame, text="Fecha Inicio:").grid(row=0, column=0, padx=(0, 5), sticky="e")
+        self.start_date_entry = DateEntry(controls_frame, width=12, background='darkblue', foreground='white', borderwidth=2)
+        self.start_date_entry.grid(row=0, column=1, sticky="ew")
+
+        ttk.Label(controls_frame, text="Fecha Fin:").grid(row=0, column=2, padx=(10, 5), sticky="e")
+        self.end_date_entry = DateEntry(controls_frame, width=12, background='darkblue', foreground='white', borderwidth=2)
+        self.end_date_entry.grid(row=0, column=3, sticky="ew")
+
+        # Widgets de Tipo y Búsqueda
+        ttk.Label(controls_frame, text="Tipo:").grid(row=1, column=0, pady=10, padx=(0, 5), sticky="e")
+        self.type_combobox = ttk.Combobox(controls_frame, values=["Todos", "Estudiantes", "Docentes"], state="readonly")
+        self.type_combobox.grid(row=1, column=1, sticky="ew")
         self.type_combobox.set("Todos")
 
-        # Botón para cargar el reporte
-        self.load_report_btn = ttk.Button(self, text="Cargar Reporte", command=self.load_report_data)
-        self.load_report_btn.grid(row=2, column=2, columnspan=2, pady=10)
-
-        # Campo de búsqueda
-        ttk.Label(self, text="Buscar:").grid(row=3, column=0, sticky="W", padx=5, pady=5)
-        self.search_entry = ttk.Entry(self, width=20)
-        self.search_entry.grid(row=3, column=1, columnspan=3, sticky="WE", padx=5, pady=5)
+        ttk.Label(controls_frame, text="Buscar:").grid(row=1, column=2, padx=(10, 5), sticky="e")
+        self.search_entry = ttk.Entry(controls_frame)
+        self.search_entry.grid(row=1, column=3, sticky="ew")
         self.search_entry.bind("<KeyRelease>", self.filter_report)
 
-        # Configuración del Treeview
+        # Botón Cargar Reporte
+        self.load_report_btn = ttk.Button(controls_frame, text="Cargar Reporte", command=self.load_report_data)
+        self.load_report_btn.grid(row=0, column=4, rowspan=2, sticky="nsew", padx=(20, 0))
+
+        # --- SECCIÓN DE LA TABLA (TREEVIEW) Y SCROLLBAR (DENTRO DE UN FRAME) ---
+        tree_frame = ttk.Frame(self)
+        tree_frame.grid(row=2, column=0, sticky="nsew", padx=10, pady=10)
+        
+        # CORRECCIÓN: Se usa 'rowconfigure' y 'columnconfigure' sin guion bajo.
+        tree_frame.rowconfigure(0, weight=1)
+        tree_frame.columnconfigure(0, weight=1)
+
         columns = ("Tipo", "Nombre", "Hora Ingreso", "Hora Salida")
-        self.report_tree = ttk.Treeview(self, columns=columns, show="headings")
-        self.report_tree.heading("Tipo", text="Tipo")
-        self.report_tree.heading("Nombre", text="Nombre")
-        self.report_tree.heading("Hora Ingreso", text="Hora Ingreso")
-        self.report_tree.heading("Hora Salida", text="Hora Salida") # Nueva columna
-        self.report_tree.grid(row=4, column=0, columnspan=4, sticky="nsew", padx=10, pady=10)
+        self.report_tree = ttk.Treeview(tree_frame, columns=columns, show="headings")
+        self.report_tree.grid(row=0, column=0, sticky="nsew")
 
-        # Ajuste de las columnas
-        self.report_tree.column("Tipo", width=100)
-        self.report_tree.column("Nombre", width=200)
-        self.report_tree.column("Hora Ingreso", width=120)
-        self.report_tree.column("Hora Salida", width=120) # Ancho de la nueva columna
-
-        # Scrollbar
-        scrollbar = ttk.Scrollbar(self, orient="vertical", command=self.report_tree.yview)
-        scrollbar.grid(row=4, column=4, sticky="ns")
+        scrollbar = ttk.Scrollbar(tree_frame, orient="vertical", command=self.report_tree.yview)
+        scrollbar.grid(row=0, column=1, sticky="ns")
         self.report_tree.configure(yscrollcommand=scrollbar.set)
+        
+        # Ajuste de las columnas
+        self.report_tree.column("Tipo", width=100, anchor="w")
+        self.report_tree.column("Nombre", width=250, anchor="w")
+        self.report_tree.column("Hora Ingreso", width=150, anchor="center")
+        self.report_tree.column("Hora Salida", width=150, anchor="center")
 
-        # Botones de exportación
-        self.export_csv_btn = ttk.Button(self, text="Exportar a CSV", command=self.export_to_csv)
-        self.export_csv_btn.grid(row=5, column=0, padx=5, pady=10)
-        self.export_pdf_btn = ttk.Button(self, text="Exportar a PDF", command=self.export_to_pdf)
-        self.export_pdf_btn.grid(row=5, column=1, padx=5, pady=10)
-        self.export_xlsx_btn = ttk.Button(self, text="Exportar a XLSX", command=self.export_to_xlsx)
-        self.export_xlsx_btn.grid(row=5, column=2, padx=5, pady=10)
+        for col in columns:
+            self.report_tree.heading(col, text=col)
+
+        # --- SECCIÓN DE BOTONES DE EXPORTACIÓN (DENTRO DE UN FRAME) ---
+        export_frame = ttk.Frame(self)
+        export_frame.grid(row=3, column=0, padx=10, pady=(0, 10), sticky="ew")
+
+        export_frame.columnconfigure(0, weight=1)
+        export_frame.columnconfigure(1, weight=1)
+        export_frame.columnconfigure(2, weight=1)
+
+        self.export_csv_btn = ttk.Button(export_frame, text="Exportar a CSV", command=self.export_to_csv)
+        self.export_csv_btn.grid(row=0, column=0, padx=5, sticky="ew")
+
+        self.export_pdf_btn = ttk.Button(export_frame, text="Exportar a PDF", command=self.export_to_pdf)
+        self.export_pdf_btn.grid(row=0, column=1, padx=5, sticky="ew")
+
+        self.export_xlsx_btn = ttk.Button(export_frame, text="Exportar a XLSX", command=self.export_to_xlsx)
+        self.export_xlsx_btn.grid(row=0, column=2, padx=5, sticky="ew")
+    
 
     def load_report_data(self):
         start_date = self.start_date_entry.get_date()
@@ -100,22 +127,23 @@ class WeeklyReportsModule(ttk.Frame):
             cur = conn.cursor()
 
             # Lógica para Estudiantes
-            if person_type in ["Todos", "Estudiante"]:
+            if person_type in ["Todos", "Estudiantes"]:
                 cur.execute(
-                    "SELECT 'Estudiante', e.nombre, i.hora_ingreso, NULL FROM ingresos_estudiantes i JOIN estudiantes e ON i.estudiante_id = e.id WHERE DATE(i.hora_ingreso) BETWEEN %s AND %s ORDER BY i.hora_ingreso",
+                    "SELECT 'Estudiante', e.nombre, i.hora_ingreso, i.hora_salida FROM ingresos_estudiantes i JOIN estudiantes e ON i.estudiante_id = e.id WHERE DATE(i.hora_ingreso) BETWEEN %s AND %s ORDER BY i.hora_ingreso",
                     (start_date, end_date)
                 )
                 student_records = cur.fetchall()
                 for rec in student_records:
+                    hora_salida = rec[3].strftime('%Y-%m-%d %H:%M:%S') if rec[3] else 'No registrada'
                     self.report_data.append({
                         'tipo': rec[0],
                         'nombre': rec[1],
                         'hora_ingreso': rec[2].strftime('%Y-%m-%d %H:%M:%S'),
-                        'hora_salida': 'N/A' # Estudiantes no tienen hora de salida en esta tabla
+                        'hora_salida': hora_salida
                     })
 
             # Lógica para Docentes
-            if person_type in ["Todos", "Docente"]:
+            if person_type in ["Todos", "Docentes"]:
                 # Se selecciona hora_salida, que puede ser nula
                 cur.execute(
                     "SELECT 'Docente', d.nombre, i.hora_ingreso, i.hora_salida FROM ingresos_docentes i JOIN docentes d ON i.docente_id = d.id WHERE DATE(i.hora_ingreso) BETWEEN %s AND %s ORDER BY i.hora_ingreso",

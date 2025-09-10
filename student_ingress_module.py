@@ -27,17 +27,23 @@ class StudentIngressModule(ttk.Frame):
         # Etiqueta y campo de entrada para el código de barras
         self.barcode_label = ttk.Label(self, text="Código de Barras:")
         self.barcode_label.grid(row=1, column=0, sticky="W", pady=5)
+        
 
         self.barcode_entry = ttk.Entry(self, width=30)
         self.barcode_entry.grid(row=1, column=1, pady=5)
+        self.barcode_entry.focus()
 
         # Botón para registrar el ingreso
         self.register_btn = ttk.Button(self, text="Registrar Ingreso Estudiante", command=self.register_ingreso)
         self.register_btn.grid(row=2, column=0, columnspan=2, pady=10)
+        
+        # Botón para registrar la salida
+        self.register_egress_btn = ttk.Button(self, text="Registrar Salida Estudiante", command=self.register_salida)
+        self.register_egress_btn.grid(row=3, column=0, columnspan=2, pady=10)
 
         # Etiqueta de estado
         self.status_label = ttk.Label(self, text="")
-        self.status_label.grid(row=3, column=0, columnspan=2, pady=5)
+        self.status_label.grid(row=4, column=0, columnspan=2, pady=5)
 
     def register_ingreso(self):
         codigo = self.barcode_entry.get().strip()
@@ -80,6 +86,58 @@ class StudentIngressModule(ttk.Frame):
 
         # Limpiar el campo
         self.barcode_entry.delete(0, tk.END)
+        
+    def register_salida(self):
+        codigo = self.barcode_entry.get().strip()
+        if not codigo:
+            messagebox.showwarning("Atención", "Ingrese un código de barras.")
+            return
+
+        try:
+            conn = db_pool.get_conn()
+            cur = conn.cursor()
+
+            # 1. Verificar si el estudiante existe y obtener su ID
+            cur.execute("SELECT id, nombre FROM estudiantes WHERE codigo_barras = %s", (codigo,))
+            row = cur.fetchone()
+
+            if not row:
+                messagebox.showerror("Error", "Código no registrado.")
+                cur.close()
+                db_pool.put_conn(conn)
+                self.barcode_entry.delete(0, tk.END)
+                return
+
+            estudiante_id, nombre = row
+
+            # 2. Encontrar el último registro de ingreso sin hora de salida
+            cur.execute(
+                "SELECT id FROM ingresos_estudiantes WHERE estudiante_id = %s AND hora_salida IS NULL ORDER BY hora_ingreso DESC LIMIT 1",
+                (estudiante_id,)
+            )
+            ingreso_row = cur.fetchone()
+
+            if ingreso_row:
+                ingreso_id = ingreso_row[0]
+                # 3. Actualizar la hora de salida en ese registro
+                cur.execute(
+                    "UPDATE ingresos_estudiantes SET hora_salida = %s WHERE id = %s",
+                    (datetime.now(), ingreso_id)
+                )
+                conn.commit()
+                hora = datetime.now().strftime('%H:%M:%S')
+                self.status_label.config(text=f"Salida registrada: {nombre} a las {hora}")
+            else:
+                messagebox.showerror("Error", "No se encontró un ingreso pendiente para este estudiante.")
+
+            cur.close()
+            db_pool.put_conn(conn)
+
+        except Exception as e:
+            messagebox.showerror("Error BD", str(e))
+
+        self.barcode_entry.delete(0, tk.END)
+
 
 if __name__ == "__main__":
     root = tk.Tk()

@@ -8,7 +8,7 @@ class TeacherIngressModule(ttk.Frame):
     def __init__(self, parent):
         super().__init__(parent)
         self.parent = parent
-        self.parent.title("Módulo Ingreso y Salida de Docentes")
+        self.parent.title("Módulo Registro Docentes")
         self.style = ttk.Style()
         self.style.theme_use('plastik')  # Aplicamos el tema 'plastik'
         self.create_widgets()

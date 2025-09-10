@@ -49,10 +49,10 @@ class MainApplication(ThemedTk):  # Usamos ThemedTk para aplicar el tema
         date_label.pack(pady=(0, 20))  # Espacio solo abajo para separar de los botones
 
         # Botones con tamaño más compacto y espaciado ajustado
-        self.student_button = ttk.Button(self, text="Ingreso y Salida de Estudiantes", command=self.open_student_module, width=28)
+        self.student_button = ttk.Button(self, text="Registro de Estudiantes", command=self.open_student_module, width=28)
         self.student_button.pack(pady=10)
 
-        self.teacher_button = ttk.Button(self, text="Ingreso y Salida de Docentes", command=self.open_teacher_module, width=28)
+        self.teacher_button = ttk.Button(self, text="Registro de Docentes", command=self.open_teacher_module, width=28)
         self.teacher_button.pack(pady=10)
 
         self.report_button = ttk.Button(self, text="Reporte de Asistencia", command=self.open_report_module, width=28)

@@ -27,7 +27,7 @@ class GeneradorCodigo(tk.Frame):
         logo_label.grid(row=0, column=0, columnspan=2, pady=10)
 
         # Etiqueta y campo de entrada para el nombre
-        self.name_label = ttk.Label(self, text="Nombre Completo:")
+        self.name_label = ttk.Label(self, text="Apellidos y Nombres:")
         self.name_label.grid(row=1, column=0, sticky="W", pady=5)
 
         self.name_entry = ttk.Entry(self, width=30)

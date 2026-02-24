@@ -21,7 +21,7 @@ class MainApplication(ctk.CTk):
         self.resizable(True, True)
 
         # Tamaño y centrado
-        width, height = 420, 660
+        width, height = 420, 690
         sw = self.winfo_screenwidth()
         sh = self.winfo_screenheight()
         self.geometry(f"{width}x{height}+{(sw-width)//2}+{(sh-height)//2}")
@@ -69,8 +69,8 @@ class MainApplication(ctk.CTk):
 
         # Definición de botones: (icono, texto, comando, color_acento)
         buttons = [
-            ("🎓", "Registro de Estudiantes",  self.open_student_module,   COLORS["accent"]),
-            ("👨‍🏫", "Registro de Docentes",     self.open_teacher_module,   "#22c55e"),
+            ("🎓", "Asistencia de Estudiantes",  self.open_student_module,   COLORS["accent"]),
+            ("👨‍🏫", "Asistencia de Docentes",     self.open_teacher_module,   "#22c55e"),
             ("📋", "Reporte de Asistencia",    self.open_report_module,    "#f59e0b"),
             ("🏷️", "Generar Código de Barra",  self.open_barcode_module,   "#a855f7"),
         ]
@@ -145,10 +145,10 @@ class MainApplication(ctk.CTk):
         return win
 
     def open_student_module(self):
-        self._open_module("Asistencia de Estudiantes", StudentIngressModule, "680x580")
+        self._open_module("Registro de Estudiantes", StudentIngressModule, "680x580")
 
     def open_teacher_module(self):
-        self._open_module("Asistencia de Docentes", TeacherIngressModule, "680x580")
+        self._open_module("Registro de Docentes", TeacherIngressModule, "680x580")
 
     def open_report_module(self):
         self._open_module("Reporte de Asistencias", WeeklyReportsModule, "920x660")

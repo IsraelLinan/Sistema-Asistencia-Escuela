@@ -1,4 +1,4 @@
-# Sistema Asistencia Escuela (Version Beta)
+# Sistema Asistencia Escuela (Version BETA)
 El proyecto es una aplicación de escritorio que gestiona la asistencia de estudiantes y docentes en un colegio, con capacidad para generar códigos de barras, registrar ingresos y generar reportes.
 # Lenguaje Principal
 Python 3.x (con sintaxis moderna como f-strings)

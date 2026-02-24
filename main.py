@@ -1,110 +1,189 @@
-import tkinter as tk
-from tkinter import ttk, messagebox
-from ttkthemes import ThemedTk  # Importamos ThemedTk de ttkthemes
+import customtkinter as ctk
+from tkinter import messagebox
+from PIL import Image
 from datetime import datetime
-from PIL import Image, ImageTk  # Importar PIL para manejar la imagen
 from student_ingress_module import StudentIngressModule
 from teacher_ingress_module import TeacherIngressModule
 from weekly_reports_module import WeeklyReportsModule
 from generador_codigo import GeneradorCodigo
-import subprocess # Importamos el modulo subprocess  
+from colegio_lib import COLORS
+import subprocess
 
-class MainApplication(ThemedTk):  # Usamos ThemedTk para aplicar el tema
+ctk.set_appearance_mode("dark")
+ctk.set_default_color_theme("blue")
+
+
+class MainApplication(ctk.CTk):
     def __init__(self):
         super().__init__()
-        # Establece el tamaño de la ventana
-        width = 350
-        height = 450
-
-        # Centra la ventana en la pantalla
-        screen_width = self.winfo_screenwidth()
-        screen_height = self.winfo_screenheight()
-        x = int((screen_width / 2) - (width / 2))
-        y = int((screen_height / 2) - (height / 2))
-        self.geometry(f"{width}x{height}+{x}+{y}")
-
-        # Fija el tamaño para que no se pueda redimensionar
-        self.resizable(False, False)
         self.title("Sistema de Gestión Escolar")
-        self.set_theme('plastik')  # Usamos el tema 'plastik'
-        self.create_widgets()
+        self.configure(fg_color=COLORS["bg"])
+        self.resizable(True, True)
 
-    def create_widgets(self):
-        # Cargar y mostrar la imagen del logo
-        logo_path = "logo_colegio.png"  # Ruta de la imagen
-        logo = Image.open(logo_path)  # Abrir la imagen
-        logo = logo.resize((100, 100), Image.Resampling.LANCZOS)  # Usamos la nueva constante LANCZOS
-        logo_image = ImageTk.PhotoImage(logo)  # Convertir la imagen a un formato que Tkinter pueda usar
+        # Tamaño y centrado
+        width, height = 420, 660
+        sw = self.winfo_screenwidth()
+        sh = self.winfo_screenheight()
+        self.geometry(f"{width}x{height}+{(sw-width)//2}+{(sh-height)//2}")
 
-        logo_label = ttk.Label(self, image=logo_image)
-        logo_label.image = logo_image  # Guardar una referencia a la imagen
-        logo_label.pack(pady=(20, 10))  # Mayor espacio arriba y menos abajo
+        self._build_ui()
+        self._update_clock()
 
-        # Titulo y fecha/hora
-        title_label = ttk.Label(self, text="Sistema de Asistencia Escolar", font=('Arial', 16, 'bold'))
-        title_label.pack(pady=(10, 5))  # Más espacio arriba, menos abajo
+    def _build_ui(self):
+        # ── Logo y marca ─────────────────────────────────────────────────────
+        header = ctk.CTkFrame(self, fg_color=COLORS["bg2"], corner_radius=0)
+        header.pack(fill="x")
 
-        now = datetime.now()
-        date_label = ttk.Label(self, text=now.strftime("%d, %B %Y, %H:%M:%S"), font=('Arial', 12))
-        date_label.pack(pady=(0, 20))  # Espacio solo abajo para separar de los botones
+        inner = ctk.CTkFrame(header, fg_color="transparent")
+        inner.pack(pady=28)
 
-        # Botones con tamaño más compacto y espaciado ajustado
-        self.student_button = ttk.Button(self, text="Registro de Estudiantes", command=self.open_student_module, width=28)
-        self.student_button.pack(pady=10)
+        try:
+            logo_img = ctk.CTkImage(
+                light_image=Image.open("logo_colegio.png"),
+                dark_image=Image.open("logo_colegio.png"),
+                size=(90, 90)
+            )
+            ctk.CTkLabel(inner, image=logo_img, text="").pack()
+        except Exception:
+            ctk.CTkLabel(inner, text="🏫", font=("Segoe UI", 52)).pack()
 
-        self.teacher_button = ttk.Button(self, text="Registro de Docentes", command=self.open_teacher_module, width=28)
-        self.teacher_button.pack(pady=10)
+        ctk.CTkLabel(inner, text="Sistema de Gestión Escolar",
+                     font=ctk.CTkFont("Segoe UI", 16, "bold"),
+                     text_color=COLORS["text"]).pack(pady=(10, 2))
 
-        self.report_button = ttk.Button(self, text="Reporte de Asistencia", command=self.open_report_module, width=28)
-        self.report_button.pack(pady=10)
+        self.clock_label = ctk.CTkLabel(inner, text="",
+                                         font=ctk.CTkFont("Segoe UI", 11),
+                                         text_color=COLORS["text_muted"])
+        self.clock_label.pack()
 
-        # Botón para abrir el generador de código de barra
-        self.barcode_button = ttk.Button(self, text="Generar Código Barra", command=self.open_barcode_module, width=28)
-        self.barcode_button.pack(pady=10)
-        
-        # botón para abrir el Dashboard externo
-        self.dashboard_button = ttk.Button(self, text="Abrir Dashboard", command=self.open_dashboard, width=28)
-        self.dashboard_button.pack(pady=10)
+        # ── Divisor ───────────────────────────────────────────────────────────
+        ctk.CTkFrame(self, height=1, fg_color=COLORS["border"]).pack(fill="x")
 
+        # ── Menú de navegación ────────────────────────────────────────────────
+        nav = ctk.CTkFrame(self, fg_color="transparent")
+        nav.pack(fill="both", expand=True, padx=28, pady=24)
+
+        ctk.CTkLabel(nav, text="MÓDULOS",
+                     font=ctk.CTkFont("Segoe UI", 9, "bold"),
+                     text_color=COLORS["text_muted"]).pack(anchor="w", pady=(0, 10))
+
+        # Definición de botones: (icono, texto, comando, color_acento)
+        buttons = [
+            ("🎓", "Registro de Estudiantes",  self.open_student_module,   COLORS["accent"]),
+            ("👨‍🏫", "Registro de Docentes",     self.open_teacher_module,   "#22c55e"),
+            ("📋", "Reporte de Asistencia",    self.open_report_module,    "#f59e0b"),
+            ("🏷️", "Generar Código de Barra",  self.open_barcode_module,   "#a855f7"),
+        ]
+
+        for icon, label, cmd, color in buttons:
+            self._nav_button(nav, icon, label, cmd, color)
+
+        # Separador antes del dashboard
+        ctk.CTkFrame(nav, height=1, fg_color=COLORS["border"]).pack(fill="x", pady=(14, 14))
+
+        ctk.CTkLabel(nav, text="HERRAMIENTAS",
+                     font=ctk.CTkFont("Segoe UI", 9, "bold"),
+                     text_color=COLORS["text_muted"]).pack(anchor="w", pady=(0, 10))
+
+        self._nav_button(nav, "📊", "Abrir Dashboard Web", self.open_dashboard, "#ef4444")
+
+        # ── Pie ───────────────────────────────────────────────────────────────
+        ctk.CTkLabel(self, text="v2.0  •  Sistema Escolar",
+                     font=ctk.CTkFont("Segoe UI", 9),
+                     text_color=COLORS["border"]).pack(pady=(0, 14))
+
+    def _nav_button(self, parent, icon, label, command, accent_color):
+        """Crea un botón de navegación con estilo de fila."""
+        # Contenedor externo para la barra de color + botón
+        row = ctk.CTkFrame(parent, fg_color="transparent", height=50)
+        row.pack(fill="x", pady=4)
+        row.pack_propagate(False)
+
+        # Barra de color lateral
+        indicator = ctk.CTkFrame(row, width=5, corner_radius=3, fg_color=accent_color)
+        indicator.pack(side="left", fill="y", padx=(0, 0))
+
+        # Botón principal
+        btn = ctk.CTkButton(
+            row,
+            text=f"  {icon}   {label}",
+            anchor="w",
+            height=46,
+            corner_radius=10,
+            font=ctk.CTkFont("Segoe UI", 12, "bold"),
+            fg_color=COLORS["bg2"],
+            hover_color=COLORS["bg3"],
+            border_width=1,
+            border_color=COLORS["border"],
+            text_color=COLORS["text"],
+            command=command
+        )
+        btn.pack(side="left", fill="both", expand=True)
+
+    def _update_clock(self):
+        now = datetime.now().strftime("%A %d de %B, %Y   %H:%M:%S")
+        self.clock_label.configure(text=now)
+        self.after(1000, self._update_clock)
+
+    # ── Abrir módulos en ventanas secundarias ─────────────────────────────────
+
+    def _open_module(self, title, ModuleClass, size="700x560"):
+        win = ctk.CTkToplevel(self)
+        win.title(title)
+        win.configure(fg_color=COLORS["bg"])
+        win.geometry(size)
+        win.resizable(True, True)
+        # Centrar la ventana secundaria
+        win.update_idletasks()
+        w, h = map(int, size.split("x"))
+        sw, sh = win.winfo_screenwidth(), win.winfo_screenheight()
+        win.geometry(f"{w}x{h}+{(sw-w)//2}+{(sh-h)//2}")
+        win.lift()
+        win.focus_force()
+        module = ModuleClass(win)
+        module.pack(fill="both", expand=True)
+        return win
 
     def open_student_module(self):
-        student_window = tk.Toplevel(self)
-        student_window.title("Ingreso de Estudiantes")
-        app = StudentIngressModule(student_window)
-        app.pack(fill='both', expand=True, padx=10, pady=10)
+        self._open_module("Asistencia de Estudiantes", StudentIngressModule, "680x580")
 
     def open_teacher_module(self):
-        teacher_window = tk.Toplevel(self)
-        teacher_window.title("Ingreso de Docentes")
-        app = TeacherIngressModule(teacher_window)
-        app.pack(fill='both', expand=True, padx=10, pady=10)
+        self._open_module("Asistencia de Docentes", TeacherIngressModule, "680x580")
 
     def open_report_module(self):
-        report_window = tk.Toplevel(self)
-        report_window.title("Reporte de Asistencias")
-        app = WeeklyReportsModule(report_window)
-        app.pack(fill='both', expand=True, padx=10, pady=10)
+        self._open_module("Reporte de Asistencias", WeeklyReportsModule, "920x660")
 
     def open_barcode_module(self):
-        barcode_window = tk.Toplevel(self)
-        barcode_window.title("Generador Código de Barra")
-        app = GeneradorCodigo(barcode_window)  # Abre el módulo de generador de código de barra
-        app.pack(fill='both', expand=True, padx=10, pady=10)
-        
+        self._open_module("Generador de Código de Barra", GeneradorCodigo, "580x640")
+
     def open_dashboard(self):
         try:
             subprocess.Popen(["streamlit", "run", "dashboard.py"])
+            # Feedback visual al usuario
+            btn_feedback = ctk.CTkToplevel(self)
+            btn_feedback.title("")
+            btn_feedback.configure(fg_color=COLORS["bg2"])
+            btn_feedback.geometry("320x120")
+            btn_feedback.resizable(False, False)
+            sw, sh = btn_feedback.winfo_screenwidth(), btn_feedback.winfo_screenheight()
+            btn_feedback.geometry(f"320x120+{(sw-320)//2}+{(sh-120)//2}")
+            ctk.CTkLabel(btn_feedback, text="✔  Dashboard iniciándose...",
+                         font=ctk.CTkFont("Segoe UI", 13, "bold"),
+                         text_color=COLORS["success"]).pack(pady=(28, 4))
+            ctk.CTkLabel(btn_feedback, text="Se abrirá en tu navegador en unos segundos.",
+                         font=ctk.CTkFont("Segoe UI", 10),
+                         text_color=COLORS["text_muted"]).pack()
+            btn_feedback.after(3000, btn_feedback.destroy)
         except FileNotFoundError:
-            messagebox.showerror("Error", "Streamlit no está instalado o no está en el PATH. "
-                                        "Por favor, instale Streamlit con 'pip install streamlit'.")
+            messagebox.showerror("Error", "Streamlit no está instalado o no está en el PATH.\n"
+                                          "Instálalo con: pip install streamlit")
         except Exception as e:
-            messagebox.showerror("Error", f"Ocurrió un error al intentar abrir el dashboard: {e}")
+            messagebox.showerror("Error", f"No se pudo abrir el dashboard:\n{e}")
 
 
 if __name__ == "__main__":
     app = MainApplication()
     app.mainloop()
-
 
 
 

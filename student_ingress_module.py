@@ -1,148 +1,194 @@
-import tkinter as tk
-from tkinter import ttk, messagebox
-from colegio_lib import db_pool  # Importamos el pool de conexiones
+import customtkinter as ctk
+from tkinter import messagebox
+from PIL import Image
+from colegio_lib import db_pool, COLORS
 from datetime import datetime
-from PIL import Image, ImageTk  # Importar PIL para manejar la imagen
 
-class StudentIngressModule(ttk.Frame):
+ctk.set_appearance_mode("dark")
+ctk.set_default_color_theme("blue")
+
+
+class StudentIngressModule(ctk.CTkFrame):
     def __init__(self, parent):
-        super().__init__(parent)
+        super().__init__(parent, fg_color=COLORS["bg"])
         self.parent = parent
-        self.parent.title("Módulo Registro Estudiantes")
-        self.style = ttk.Style()
-        self.style.theme_use('plastik')  # Aplicamos el tema 'plastik'
-        self.create_widgets()
+        if isinstance(parent, ctk.CTk) or isinstance(parent, ctk.CTkToplevel):
+            self.parent.title("Módulo Registro Estudiantes")
+        self._build_ui()
 
-    def create_widgets(self):
-        # Cargar y mostrar la imagen del logo
-        logo_path = "logo_colegio.png"  # Ruta de la imagen
-        logo = Image.open(logo_path)  # Abrir la imagen
-        logo = logo.resize((100, 100), Image.Resampling.LANCZOS)  # Ajustar el tamaño de la imagen
-        logo_image = ImageTk.PhotoImage(logo)  # Convertir la imagen a un formato que Tkinter pueda usar
+    def _build_ui(self):
+        # ── Encabezado ──────────────────────────────────────────────────────
+        header = ctk.CTkFrame(self, fg_color=COLORS["bg2"], corner_radius=14,
+                              border_width=1, border_color=COLORS["border"])
+        header.pack(fill="x", padx=20, pady=(20, 10))
 
-        logo_label = ttk.Label(self, image=logo_image)
-        logo_label.image = logo_image  # Guardar una referencia a la imagen
-        logo_label.grid(row=0, column=0, columnspan=2, pady=10)
+        try:
+            logo_img = ctk.CTkImage(
+                light_image=Image.open("logo_colegio.png"),
+                dark_image=Image.open("logo_colegio.png"),
+                size=(70, 70)
+            )
+            ctk.CTkLabel(header, image=logo_img, text="").pack(side="left", padx=18, pady=12)
+        except Exception:
+            ctk.CTkLabel(header, text="🎓", font=("Segoe UI", 36)).pack(side="left", padx=18, pady=12)
 
-        # Etiqueta y campo de entrada para el código de barras
-        self.barcode_label = ttk.Label(self, text="Código de Barras:")
-        self.barcode_label.grid(row=1, column=0, sticky="W", pady=5)
-        
+        title_box = ctk.CTkFrame(header, fg_color="transparent")
+        title_box.pack(side="left", pady=12)
+        ctk.CTkLabel(title_box, text="Registro de Estudiantes",
+                     font=ctk.CTkFont("Segoe UI", 18, "bold"),
+                     text_color=COLORS["text"]).pack(anchor="w")
+        ctk.CTkLabel(title_box, text="Ingreso y salida mediante código de barras",
+                     font=ctk.CTkFont("Segoe UI", 11),
+                     text_color=COLORS["text_muted"]).pack(anchor="w")
 
-        self.barcode_entry = ttk.Entry(self, width=30)
-        self.barcode_entry.grid(row=1, column=1, pady=5)
+        # ── Panel principal ──────────────────────────────────────────────────
+        main = ctk.CTkFrame(self, fg_color=COLORS["bg2"], corner_radius=14,
+                            border_width=1, border_color=COLORS["border"])
+        main.pack(fill="both", expand=True, padx=20, pady=10)
+
+        # Fecha y hora en tiempo real
+        self.datetime_label = ctk.CTkLabel(main, text="",
+                                           font=ctk.CTkFont("Segoe UI", 11),
+                                           text_color=COLORS["text_muted"])
+        self.datetime_label.pack(pady=(18, 4))
+        self._update_clock()
+
+        # Separador visual
+        sep = ctk.CTkFrame(main, height=1, fg_color=COLORS["border"])
+        sep.pack(fill="x", padx=30, pady=(4, 20))
+
+        # Ícono escáner
+        ctk.CTkLabel(main, text="▤", font=("Segoe UI", 42),
+                     text_color=COLORS["accent"]).pack()
+        ctk.CTkLabel(main, text="Escanee o ingrese el código de barras",
+                     font=ctk.CTkFont("Segoe UI", 12),
+                     text_color=COLORS["text_muted"]).pack(pady=(4, 16))
+
+        # Entry código
+        self.barcode_entry = ctk.CTkEntry(
+            main, placeholder_text="Código de barras...",
+            height=46, corner_radius=10, width=320,
+            font=ctk.CTkFont("Consolas", 13),
+            fg_color=COLORS["bg3"], border_color=COLORS["accent"],
+            text_color=COLORS["text"]
+        )
+        self.barcode_entry.pack(pady=(0, 22))
         self.barcode_entry.focus()
+        self.barcode_entry.bind("<Return>", lambda e: self.register_ingreso())
 
-        # Botón para registrar el ingreso
-        self.register_btn = ttk.Button(self, text="Registrar Ingreso Estudiante", command=self.register_ingreso)
-        self.register_btn.grid(row=2, column=0, columnspan=2, pady=10)
-        
-        # Botón para registrar la salida
-        self.register_egress_btn = ttk.Button(self, text="Registrar Salida Estudiante", command=self.register_salida)
-        self.register_egress_btn.grid(row=3, column=0, columnspan=2, pady=10)
+        # Botones
+        btn_frame = ctk.CTkFrame(main, fg_color="transparent")
+        btn_frame.pack(pady=(0, 20))
 
-        # Etiqueta de estado
-        self.status_label = ttk.Label(self, text="")
-        self.status_label.grid(row=4, column=0, columnspan=2, pady=5)
+        ctk.CTkButton(
+            btn_frame, text="▶  Registrar Ingreso", width=200, height=44,
+            corner_radius=10, font=ctk.CTkFont("Segoe UI", 12, "bold"),
+            fg_color=COLORS["accent"], hover_color=COLORS["accent_hover"],
+            command=self.register_ingreso
+        ).grid(row=0, column=0, padx=8)
+
+        ctk.CTkButton(
+            btn_frame, text="◀  Registrar Salida", width=200, height=44,
+            corner_radius=10, font=ctk.CTkFont("Segoe UI", 12, "bold"),
+            fg_color=COLORS["bg3"], hover_color=COLORS["border"],
+            border_width=1, border_color=COLORS["border"],
+            command=self.register_salida
+        ).grid(row=0, column=1, padx=8)
+
+        # Panel de estado / historial
+        sep2 = ctk.CTkFrame(main, height=1, fg_color=COLORS["border"])
+        sep2.pack(fill="x", padx=30, pady=(8, 14))
+
+        ctk.CTkLabel(main, text="Último registro",
+                     font=ctk.CTkFont("Segoe UI", 10, "bold"),
+                     text_color=COLORS["text_muted"]).pack()
+
+        self.status_card = ctk.CTkFrame(main, fg_color=COLORS["bg3"],
+                                        corner_radius=10, height=60)
+        self.status_card.pack(fill="x", padx=30, pady=(6, 20))
+        self.status_card.pack_propagate(False)
+
+        self.status_label = ctk.CTkLabel(self.status_card, text="Sin registros aún",
+                                          font=ctk.CTkFont("Segoe UI", 12),
+                                          text_color=COLORS["text_muted"])
+        self.status_label.place(relx=0.5, rely=0.5, anchor="center")
+
+    def _update_clock(self):
+        now = datetime.now().strftime("%A, %d de %B de %Y  —  %H:%M:%S")
+        self.datetime_label.configure(text=now)
+        self.after(1000, self._update_clock)
+
+    def _set_status(self, msg, color):
+        self.status_label.configure(text=msg, text_color=color)
+        self.status_card.configure(fg_color=COLORS["bg3"])
 
     def register_ingreso(self):
         codigo = self.barcode_entry.get().strip()
         if not codigo:
             messagebox.showwarning("Atención", "Ingrese un código de barras.")
             return
-
         try:
-            # Obtener una conexión del pool
             conn = db_pool.get_conn()
             cur = conn.cursor()
-            # Verificar si el estudiante existe
-            cur.execute(
-                "SELECT id, nombre FROM estudiantes WHERE codigo_barras = %s",
-                (codigo,)
-            )
+            cur.execute("SELECT id, nombre FROM estudiantes WHERE codigo_barras = %s", (codigo,))
             row = cur.fetchone()
-
             if row:
                 estudiante_id, nombre = row
-                # Registrar ingreso
-                cur.execute(
-                    "INSERT INTO ingresos_estudiantes (estudiante_id) VALUES (%s)",
-                    (estudiante_id,)
-                )
+                cur.execute("INSERT INTO ingresos_estudiantes (estudiante_id) VALUES (%s)", (estudiante_id,))
                 conn.commit()
                 hora = datetime.now().strftime('%H:%M:%S')
-                self.status_label.config(
-                    text=f"Ingreso registrado: {nombre} a las {hora}"
-                )
+                self._set_status(f"✔  Ingreso: {nombre}  —  {hora}", COLORS["success"])
             else:
-                messagebox.showerror("Error", "Código no registrado.")
-
+                self._set_status("✗  Código no registrado en el sistema.", COLORS["danger"])
             cur.close()
-            # Devolver la conexión al pool
             db_pool.put_conn(conn)
-
         except Exception as e:
             messagebox.showerror("Error BD", str(e))
+        self.barcode_entry.delete(0, "end")
 
-        # Limpiar el campo
-        self.barcode_entry.delete(0, tk.END)
-        
     def register_salida(self):
         codigo = self.barcode_entry.get().strip()
         if not codigo:
             messagebox.showwarning("Atención", "Ingrese un código de barras.")
             return
-
         try:
             conn = db_pool.get_conn()
             cur = conn.cursor()
-
-            # 1. Verificar si el estudiante existe y obtener su ID
             cur.execute("SELECT id, nombre FROM estudiantes WHERE codigo_barras = %s", (codigo,))
             row = cur.fetchone()
-
             if not row:
-                messagebox.showerror("Error", "Código no registrado.")
+                self._set_status("✗  Código no registrado en el sistema.", COLORS["danger"])
                 cur.close()
                 db_pool.put_conn(conn)
-                self.barcode_entry.delete(0, tk.END)
+                self.barcode_entry.delete(0, "end")
                 return
-
             estudiante_id, nombre = row
-
-            # 2. Encontrar el último registro de ingreso sin hora de salida
             cur.execute(
                 "SELECT id FROM ingresos_estudiantes WHERE estudiante_id = %s AND hora_salida IS NULL ORDER BY hora_ingreso DESC LIMIT 1",
                 (estudiante_id,)
             )
             ingreso_row = cur.fetchone()
-
             if ingreso_row:
-                ingreso_id = ingreso_row[0]
-                # 3. Actualizar la hora de salida en ese registro
-                cur.execute(
-                    "UPDATE ingresos_estudiantes SET hora_salida = %s WHERE id = %s",
-                    (datetime.now(), ingreso_id)
-                )
+                cur.execute("UPDATE ingresos_estudiantes SET hora_salida = %s WHERE id = %s",
+                            (datetime.now(), ingreso_row[0]))
                 conn.commit()
                 hora = datetime.now().strftime('%H:%M:%S')
-                self.status_label.config(text=f"Salida registrada: {nombre} a las {hora}")
+                self._set_status(f"◀  Salida: {nombre}  —  {hora}", COLORS["warning"])
             else:
-                messagebox.showerror("Error", "No se encontró un ingreso pendiente para este estudiante.")
-
+                self._set_status("⚠  No hay ingreso pendiente para este estudiante.", COLORS["warning"])
             cur.close()
             db_pool.put_conn(conn)
-
         except Exception as e:
             messagebox.showerror("Error BD", str(e))
-
-        self.barcode_entry.delete(0, tk.END)
+        self.barcode_entry.delete(0, "end")
 
 
 if __name__ == "__main__":
-    root = tk.Tk()
+    root = ctk.CTk()
+    root.configure(fg_color=COLORS["bg"])
+    root.geometry("640x520")
     app = StudentIngressModule(root)
-    app.pack(padx=10, pady=10)
+    app.pack(fill="both", expand=True, padx=10, pady=10)
     root.mainloop()
 
 

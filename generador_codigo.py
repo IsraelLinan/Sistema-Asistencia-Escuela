@@ -1,127 +1,177 @@
-import tkinter as tk
-from tkinter import ttk, messagebox
+import customtkinter as ctk
+from tkinter import messagebox
 import barcode
 from barcode.writer import ImageWriter
 from PIL import Image, ImageTk
 import hashlib
-from colegio_lib import db_pool  # Importamos la conexión a la base de datos
+from colegio_lib import db_pool, COLORS
 
-class GeneradorCodigo(tk.Frame):
+ctk.set_appearance_mode("dark")
+ctk.set_default_color_theme("blue")
+
+
+class GeneradorCodigo(ctk.CTkFrame):
     def __init__(self, parent):
-        super().__init__(parent)
+        super().__init__(parent, fg_color=COLORS["bg"])
         self.parent = parent
-        self.parent.title("Generador de Códigos de Barra")
-        self.style = ttk.Style()
-        self.style.theme_use('plastik')  # Aplicamos el tema 'plastik'
-        self.create_widgets()
+        if isinstance(parent, ctk.CTk) or isinstance(parent, ctk.CTkToplevel):
+            self.parent.title("Generador de Códigos de Barra")
+        self.barcode_image = None
+        self._build_ui()
 
-    def create_widgets(self):
-        # Cargar y mostrar la imagen del logo
-        logo_path = "logo_colegio.png"  # Ruta de la imagen
-        logo = Image.open(logo_path)  # Abrir la imagen
-        logo = logo.resize((100, 100), Image.Resampling.LANCZOS)  # Ajustar el tamaño de la imagen
-        logo_image = ImageTk.PhotoImage(logo)  # Convertir la imagen a un formato que Tkinter pueda usar
+    def _build_ui(self):
+        # ── Encabezado ──────────────────────────────────────────────────────
+        header = ctk.CTkFrame(self, fg_color=COLORS["bg2"], corner_radius=14,
+                              border_width=1, border_color=COLORS["border"])
+        header.pack(fill="x", padx=20, pady=(20, 10))
 
-        logo_label = ttk.Label(self, image=logo_image)
-        logo_label.image = logo_image  # Guardar una referencia a la imagen
-        logo_label.grid(row=0, column=0, columnspan=2, pady=10)
+        try:
+            logo_img = ctk.CTkImage(
+                light_image=Image.open("logo_colegio.png"),
+                dark_image=Image.open("logo_colegio.png"),
+                size=(70, 70)
+            )
+            ctk.CTkLabel(header, image=logo_img, text="").pack(side="left", padx=18, pady=12)
+        except Exception:
+            ctk.CTkLabel(header, text="🏷️", font=("Segoe UI", 36)).pack(side="left", padx=18, pady=12)
 
-        # Etiqueta y campo de entrada para el nombre
-        self.name_label = ttk.Label(self, text="Apellidos y Nombres:")
-        self.name_label.grid(row=1, column=0, sticky="W", pady=5)
+        title_box = ctk.CTkFrame(header, fg_color="transparent")
+        title_box.pack(side="left", pady=12)
+        ctk.CTkLabel(title_box, text="Generador de Códigos de Barra",
+                     font=ctk.CTkFont("Segoe UI", 18, "bold"),
+                     text_color=COLORS["text"]).pack(anchor="w")
+        ctk.CTkLabel(title_box, text="Registre y genere identificadores para el personal",
+                     font=ctk.CTkFont("Segoe UI", 11),
+                     text_color=COLORS["text_muted"]).pack(anchor="w")
 
-        self.name_entry = ttk.Entry(self, width=30)
-        self.name_entry.grid(row=1, column=1, pady=5)
+        # ── Formulario ───────────────────────────────────────────────────────
+        form = ctk.CTkFrame(self, fg_color=COLORS["bg2"], corner_radius=14,
+                            border_width=1, border_color=COLORS["border"])
+        form.pack(fill="x", padx=20, pady=6)
 
-        # ComboBox para seleccionar tipo de persona (Estudiante o Docente)
-        self.type_label = ttk.Label(self, text="Seleccione:")
-        self.type_label.grid(row=2, column=0, sticky="W", pady=5)
+        # Nombre
+        ctk.CTkLabel(form, text="Apellidos y Nombres",
+                     font=ctk.CTkFont("Segoe UI", 11, "bold"),
+                     text_color=COLORS["text_muted"], anchor="w").pack(padx=24, pady=(20, 4), fill="x")
+        self.name_entry = ctk.CTkEntry(
+            form, placeholder_text="Ej: García López, Juan Carlos",
+            height=44, corner_radius=10,
+            fg_color=COLORS["bg3"], border_color=COLORS["border"],
+            text_color=COLORS["text"], font=ctk.CTkFont("Segoe UI", 12)
+        )
+        self.name_entry.pack(padx=24, pady=(0, 14), fill="x")
 
-        self.type_combobox = ttk.Combobox(self, values=["Estudiante", "Docente"], state="readonly", width=28)
-        self.type_combobox.grid(row=2, column=1, pady=5)
-        self.type_combobox.set("Estudiante")  # Valor predeterminado
+        # Tipo de persona
+        ctk.CTkLabel(form, text="Tipo de Persona",
+                     font=ctk.CTkFont("Segoe UI", 11, "bold"),
+                     text_color=COLORS["text_muted"], anchor="w").pack(padx=24, fill="x")
 
-        # Botón para generar el código de barra
-        self.generate_btn = ttk.Button(self, text="Generar Código de Barra", command=self.generate_barcode)
-        self.generate_btn.grid(row=3, column=0, columnspan=2, pady=10)
+        self.type_var = ctk.StringVar(value="Estudiante")
+        type_row = ctk.CTkFrame(form, fg_color="transparent")
+        type_row.pack(padx=24, pady=(6, 20), fill="x")
 
-        # Imagen del código de barra
-        self.barcode_image_label = ttk.Label(self, text="Código de Barra generado aparecerá aquí.")
-        self.barcode_image_label.grid(row=4, column=0, columnspan=2, pady=5)
+        ctk.CTkRadioButton(type_row, text="Estudiante", variable=self.type_var,
+                           value="Estudiante",
+                           font=ctk.CTkFont("Segoe UI", 12),
+                           text_color=COLORS["text"],
+                           fg_color=COLORS["accent"]).pack(side="left", padx=(0, 20))
+        ctk.CTkRadioButton(type_row, text="Docente", variable=self.type_var,
+                           value="Docente",
+                           font=ctk.CTkFont("Segoe UI", 12),
+                           text_color=COLORS["text"],
+                           fg_color=COLORS["accent"]).pack(side="left")
 
-        # Botón para imprimir el código de barra
-        self.print_btn = ttk.Button(self, text="Imprimir Código de Barra", command=self.print_barcode)
-        self.print_btn.grid(row=5, column=0, columnspan=2, pady=10)
+        # Botón generar
+        ctk.CTkButton(
+            form, text="⊕  Generar y Registrar Código", height=44,
+            corner_radius=10, font=ctk.CTkFont("Segoe UI", 13, "bold"),
+            fg_color=COLORS["accent"], hover_color=COLORS["accent_hover"],
+            command=self.generate_barcode
+        ).pack(padx=24, pady=(0, 20), fill="x")
 
-        self.barcode_image = None  # Variable para almacenar la imagen del código de barra
+        # ── Vista previa del código ──────────────────────────────────────────
+        preview = ctk.CTkFrame(self, fg_color=COLORS["bg2"], corner_radius=14,
+                               border_width=1, border_color=COLORS["border"])
+        preview.pack(fill="both", expand=True, padx=20, pady=(6, 20))
+
+        ctk.CTkLabel(preview, text="Vista previa del código",
+                     font=ctk.CTkFont("Segoe UI", 11, "bold"),
+                     text_color=COLORS["text_muted"]).pack(pady=(16, 6))
+
+        sep = ctk.CTkFrame(preview, height=1, fg_color=COLORS["border"])
+        sep.pack(fill="x", padx=24, pady=(0, 14))
+
+        self.barcode_label = ctk.CTkLabel(preview, text="El código generado aparecerá aquí",
+                                          font=ctk.CTkFont("Segoe UI", 11),
+                                          text_color=COLORS["text_muted"])
+        self.barcode_label.pack(expand=True)
+
+        # Botón imprimir
+        ctk.CTkButton(
+            preview, text="🖨  Imprimir Código", height=40,
+            corner_radius=10, font=ctk.CTkFont("Segoe UI", 12),
+            fg_color=COLORS["bg3"], hover_color=COLORS["border"],
+            border_width=1, border_color=COLORS["border"],
+            command=self.print_barcode
+        ).pack(padx=24, pady=(0, 18), fill="x")
 
     def generate_barcode(self):
-        # Obtener el nombre completo del estudiante o docente
         name = self.name_entry.get().strip()
-        person_type = self.type_combobox.get()
+        person_type = self.type_var.get()
 
         if not name:
             messagebox.showwarning("Atención", "Ingrese un nombre completo.")
             return
 
-        # Generar un código de barras único basado en el nombre
         unique_id = hashlib.md5(name.encode()).hexdigest()
 
         try:
-            # Conectar a la base de datos
             conn = db_pool.get_conn()
             cur = conn.cursor()
-
-            # Insertar la persona en la tabla 'personas' (tabla general)
             cur.execute(
                 "INSERT INTO personas (nombre_completo, codigo_barras, tipo_persona) VALUES (%s, %s, %s)",
                 (name, unique_id, person_type)
             )
             conn.commit()
 
-            # Dependiendo del tipo, insertar en la tabla específica (estudiantes o docentes)
             if person_type == "Estudiante":
-                cur.execute(
-                    "INSERT INTO estudiantes (nombre, codigo_barras) VALUES (%s, %s)",
-                    (name, unique_id)
-                )
+                cur.execute("INSERT INTO estudiantes (nombre, codigo_barras) VALUES (%s, %s)", (name, unique_id))
             elif person_type == "Docente":
-                cur.execute(
-                    "INSERT INTO docentes (nombre, codigo_barras) VALUES (%s, %s)",
-                    (name, unique_id)
-                )
+                cur.execute("INSERT INTO docentes (nombre, codigo_barras) VALUES (%s, %s)", (name, unique_id))
 
-            # Confirmar la inserción
             conn.commit()
-
-            # Cerrar la conexión
             cur.close()
-            # Devolver la conexión al pool
             db_pool.put_conn(conn)
 
-            # Generar el código de barras
-            barcode_object = barcode.get_barcode_class('code128')(unique_id, writer=ImageWriter())
-            barcode_image = barcode_object.render()
+            # Generar imagen del código
+            barcode_obj = barcode.get_barcode_class('code128')(unique_id, writer=ImageWriter())
+            self.barcode_image = barcode_obj.render()
 
-            # Mostrar la imagen del código de barra
-            self.barcode_image = barcode_image
-            self.barcode_image_label.config(text="Código de Barra generado.")
-            self.barcode_image.show()
+            # Mostrar en la UI
+            preview_img = self.barcode_image.copy()
+            preview_img.thumbnail((360, 120))
+            tk_img = ImageTk.PhotoImage(preview_img)
+            self.barcode_label.configure(image=tk_img, text="")
+            self.barcode_label.image = tk_img
+
+            messagebox.showinfo("Éxito", f"'{name}' registrado correctamente como {person_type}.")
 
         except Exception as e:
             messagebox.showerror("Error BD", str(e))
 
     def print_barcode(self):
         if self.barcode_image:
-            # Imprimir la imagen del código de barra
-            self.barcode_image.show()  # Esto abrirá la imagen para su impresión por el visor predeterminado del sistema
+            self.barcode_image.show()
         else:
             messagebox.showwarning("Atención", "Primero genere un código de barra.")
 
+
 if __name__ == "__main__":
-    root = tk.Tk()
+    root = ctk.CTk()
+    root.configure(fg_color=COLORS["bg"])
+    root.geometry("560x620")
     app = GeneradorCodigo(root)
-    app.pack(padx=10, pady=10)
+    app.pack(fill="both", expand=True, padx=10, pady=10)
     root.mainloop()
 
 

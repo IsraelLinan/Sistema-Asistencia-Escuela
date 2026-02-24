@@ -16,7 +16,7 @@ class LoginScreen(ctk.CTk):
         self.resizable(True, True)
 
         # Centrar ventana
-        width, height = 420, 560
+        width, height = 420, 570
         sw = self.winfo_screenwidth()
         sh = self.winfo_screenheight()
         x = (sw - width) // 2

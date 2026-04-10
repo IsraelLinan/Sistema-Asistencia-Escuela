@@ -6,6 +6,7 @@ from student_ingress_module import StudentIngressModule
 from teacher_ingress_module import TeacherIngressModule
 from weekly_reports_module import WeeklyReportsModule
 from generador_codigo import GeneradorCodigo
+from generador_carnet import GeneradorCarnet
 from colegio_lib import COLORS
 import subprocess
 
@@ -21,7 +22,7 @@ class MainApplication(ctk.CTk):
         self.resizable(True, True)
 
         # Tamaño y centrado
-        width, height = 420, 690
+        width, height = 420, 750
         sw = self.winfo_screenwidth()
         sh = self.winfo_screenheight()
         self.geometry(f"{width}x{height}+{(sw-width)//2}+{(sh-height)//2}")
@@ -73,6 +74,7 @@ class MainApplication(ctk.CTk):
             ("👨‍🏫", "Asistencia de Docentes",     self.open_teacher_module,   "#22c55e"),
             ("📋", "Reporte de Asistencia",    self.open_report_module,    "#f59e0b"),
             ("🏷️", "Generar Código de Barra",  self.open_barcode_module,   "#a855f7"),
+            ("🪪", "Generar Carné Estudiantil", self.open_carnet_module,    "#06b6d4"),
         ]
 
         for icon, label, cmd, color in buttons:
@@ -155,6 +157,9 @@ class MainApplication(ctk.CTk):
 
     def open_barcode_module(self):
         self._open_module("Generador de Código de Barra", GeneradorCodigo, "580x640")
+
+    def open_carnet_module(self):
+        self._open_module("Generador de Carné Estudiantil", GeneradorCarnet, "1100x680")
 
     def open_dashboard(self):
         try:
